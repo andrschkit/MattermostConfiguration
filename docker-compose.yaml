@@ -1,4 +1,4 @@
-version: "2.4"
+version: "3.9"
 
 services:
   postgres:
@@ -8,16 +8,14 @@ services:
     environment:
       POSTGRES_DB: mattermost
       POSTGRES_USER: mmuser
-      POSTGRES_PASSWORD: mmuser_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./volumes/data/postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mmuser -d mattermost"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
-      retries: 5
-    networks:
-      - mattermost
+      retries: 10
 
   mattermost:
     image: mattermost/mattermost-team-edition:latest
@@ -28,16 +26,27 @@ services:
         condition: service_healthy
     ports:
       - "8065:8065"
+    environment:
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      MM_SQLSETTINGS_DATASOURCE: postgres://mmuser:${POSTGRES_PASSWORD}@postgres:5432/mattermost?sslmode=disable&connect_timeout=10
+      MM_SERVICESETTINGS_SITEURL: https://chat.uaz-rosatom.ru
+      MM_SERVICESETTINGS_LISTENADDRESS: :8065
+      MM_SERVICESETTINGS_ENABLELOCALMODE: "false"
+      MM_LOGSETTINGS_ENABLECONSOLE: "true"
+      MM_PLUGINSETTINGS_ENABLEUPLOADS: "true"
     volumes:
-      - ./config.json:/mattermost/config/config.json
-      - ./volumes/data/mattermost:/mattermost/data
-      - ./volumes/logs:/mattermost/logs
-      - ./volumes/plugins:/mattermost/plugins
-      - ./volumes/client-plugins:/mattermost/client/plugins
-      - ./volumes/bleve-indexes:/mattermost/bleve-indexes
-    networks:
-      - mattermost
+      - mattermost_config:/mattermost/config
+      - mattermost_data:/mattermost/data
+      - mattermost_logs:/mattermost/logs
+      - mattermost_plugins:/mattermost/plugins
+      - mattermost_client_plugins:/mattermost/client/plugins
+      - mattermost_bleve_indexes:/mattermost/bleve-indexes
 
-networks:
-  mattermost:
-    driver: bridge
+volumes:
+  postgres_data:
+  mattermost_config:
+  mattermost_data:
+  mattermost_logs:
+  mattermost_plugins:
+  mattermost_client_plugins:
+  mattermost_bleve_indexes:
