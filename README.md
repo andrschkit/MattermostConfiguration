@@ -4,23 +4,31 @@
 
 Параметры текущей схемы:
 
-- внешний адрес чата: ``
-- `nginx` уже проксирует трафик на `192.168._._:8065`
+- внешний адрес чата: `https://chat.uaz-rosatom.ru`
+- `nginx` уже проксирует трафик на `192.168.10.80:8065`
 - сам `Mattermost` слушает HTTP внутри ВМ на порту `8065`
 
 ## Запуск
 
-1. Создать рядом с `docker-compose.yaml` файл `.env`
-2. Указать пароль для БД:
-
-```env
-POSTGRES_PASSWORD=change_me_to_strong_password
-```
-
+1. Скопировать `.env.example` в `.env`
+2. Указать пароль для БД и параметры `SMTP`
 3. Запустить контейнеры:
 
 ```bash
 docker compose up -d
+```
+
+Пример `.env`:
+
+```env
+POSTGRES_PASSWORD=change_me_to_strong_password
+SMTP_AUTH_ENABLED=true
+SMTP_SECURITY=STARTTLS
+SMTP_SERVER=smtp.company.local
+SMTP_PORT=587
+SMTP_USERNAME=mattermost@uaz-rosatom.ru
+SMTP_PASSWORD=change_me_to_smtp_password
+SMTP_FROM=mattermost@uaz-rosatom.ru
 ```
 
 ## Что поднимается
@@ -29,8 +37,26 @@ docker compose up -d
 - `mattermost/mattermost-team-edition:latest`
 - постоянные Docker volumes для БД, конфигурации, данных, логов и плагинов
 
+## Приглашения по email
+
+После заполнения `SMTP`-параметров и перезапуска `Mattermost` можно приглашать пользователей через веб-интерфейс:
+
+1. Войти под администратором
+2. Открыть нужную команду
+3. Выбрать `Invite People` или `Invite Members`
+4. Ввести один или несколько `email`
+5. Отправить приглашение
+
+Если ваша почта не требует авторизации, можно указать:
+
+```env
+SMTP_AUTH_ENABLED=false
+SMTP_USERNAME=
+SMTP_PASSWORD=
+```
+
 ## Важно для nginx
 
-Так как TLS завершается на внешнем `nginx`, в `Mattermost` уже задан `SiteURL = `, а сам контейнер публикует `8065:8065`.
+Так как TLS завершается на внешнем `nginx`, в `Mattermost` уже задан `SiteURL = https://chat.uaz-rosatom.ru`, а сам контейнер публикует `8065:8065`.
 
-Для корректной работы веб-сокетов в `nginx` должны пробрасываться заголовки `Upgrade` и `Connection`, а также `X-Forwarded-Proto https`.
+Для корректной работы веб-сокетов в `nginx` должны пробрасываться заголовки `Upgrade`, `Connection` и `X-Forwarded-Proto https`.
