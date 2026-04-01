@@ -1,0 +1,43 @@
+version: "2.4"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: mattermost-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mattermost
+      POSTGRES_USER: mmuser
+      POSTGRES_PASSWORD: mmuser_password
+    volumes:
+      - ./volumes/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mmuser -d mattermost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mattermost
+
+  mattermost:
+    image: mattermost/mattermost-team-edition:latest
+    container_name: mattermost
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8065:8065"
+    volumes:
+      - ./config.json:/mattermost/config/config.json
+      - ./volumes/data/mattermost:/mattermost/data
+      - ./volumes/logs:/mattermost/logs
+      - ./volumes/plugins:/mattermost/plugins
+      - ./volumes/client-plugins:/mattermost/client/plugins
+      - ./volumes/bleve-indexes:/mattermost/bleve-indexes
+    networks:
+      - mattermost
+
+networks:
+  mattermost:
+    driver: bridge
